@@ -18,7 +18,7 @@ def run_index():
   if flask.request.method == 'GET':
 
 
-    gbl_chamber = 'senate'
+    gbl_chamber = 'Senate'
     gbl_congress= 113
     gbl_data = fetch_data(gbl_chamber,gbl_congress)
 
