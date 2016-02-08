@@ -1,0 +1,151 @@
+<!DOCTYPE HTML>
+
+<head>
+  <title>Title of the document</title>
+  <script src='../static/d3.min.js'></script>
+  <script> var data  = {{data|safe}}</script>
+  <style type="text/css">
+
+    table.table-style-one td {
+        border-width: 1px;
+
+        padding: 4px;
+
+        background-color: #ffffff;
+    }
+  div.tooltip {
+    position: absolute;
+    text-align: center;
+    width: 120px;
+    height: 28px;
+    padding: 2px;
+    font: 12px sans-serif;
+    background: lightsteelblue;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+}
+  </style>
+
+</head>
+
+<body>
+  <h1>Congressional Voting Conformity</h1>
+  <h3>{{chamber}} Session {{session}} Voting Data  </h3>
+  <p>(Mouse over data for details.)</p>
+  <div>
+    <svg id='canvas' height=600 width=900>
+    </svg>
+  </div>
+
+  <div>
+  <form method='POST' action='index'>
+    <table class="table-style-one" >
+      <tr>   <td>Congressional Session:</td>   <td align='right'> <select id='con_num' name='con_num'></select></td>   </tr>
+      <tr >  <td>Chamber:<td> <select id='chamber' name='chamber'>
+                                <option id='house' value='house'>House</option>
+                                <option id='senate' value='senate'>Senate</option>  </select></td></tr>
+      <tr> <td></td><td><button  type='submit' value='submit'>Submit</button > </td></tr>
+    </table>
+  </form>
+  </div>
+
+  <p>This is a toy app I built to play around with the Nytimes API, flask and D3.js. Checkout my
+    <a href='https://mighty-mountain-30283.herokuapp.com/index'>scientific word cloud</a> to see more!
+  </p>
+  <p>Questions Comments? Josh Friedman: jfried23@uw.edu</p>
+
+  <a href='http://developer.nytimes.com'> <img src="./static/poweredby_nytimes_200a.png"></img></a>
+</body>
+
+<script>
+
+  var cong = d3.range(107,114);
+
+  d3.select('#con_num')
+    .selectAll('option')
+    .data( cong )
+    .enter()
+    .append('option')
+    .attr('value', function(d){ return d; } )
+    .text(function(d){ return d; } )
+    .filter( function(d){ return +d == {{session}}; })
+    .attr("selected","selected");
+
+  d3.select('#{{chamber}}').attr("selected","selected");
+</script>
+
+<script>
+
+
+    // Define the div for the tooltip
+    var div = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+    var canvas = d3.select('#canvas');
+
+    var plt    = canvas.append('g');
+
+    var mar = { 't':20, 'b':100, 'l':50, 'r':10 };
+
+
+    var yscl = d3.scale.linear()
+               .range([mar.t, canvas.attr('height')-mar.b])
+               .domain([ 100, d3.min(data, function(d){ if (+d.votes_with_party_pct > 0 ) {return +d.votes_with_party_pct-1;}})]);
+
+
+    var xscl = d3.scale.linear()
+               .range([mar.l, canvas.attr('width')-mar.r-mar.l])
+               .domain([ 0, d3.max(data, function(d){ return +d.seniority;})]);
+
+    plt.selectAll('circle')
+       .data( data )
+       .enter()
+       .append('circle')
+       .filter( function(d){ return +d.votes_with_party_pct > 0.0 } )
+
+       .attr( 'id', function(d){ return d.id; } )
+       .attr( 'cx', function(d){ return xscl(+d.seniority); } )
+       .attr( 'cy', function(d){ return yscl(+d.votes_with_party_pct); } )
+       .attr( 'fill', function(d){ if( d.party=='D'){return 'blue'}
+                                   else if (d.party =='R'){return 'red'}
+                                   else {return 'grey'}})
+       .attr( 'r', 3)
+       .on('mouseover',
+          function(d){
+            d3.select(this).attr('r',8);
+            div.transition()
+                .duration(200)
+                .style("opacity", .9);
+            div.html( d.first_name +' '+d.last_name +'<br/>State: '+d.state )
+                .style("left", (d3.event.pageX) + "px")
+                .style("top", (d3.event.pageY - 28) + "px");
+            } )
+
+       .on('mouseout', function(d){ d3.select(this).attr('r',3)});
+
+
+  plt.attr('transform','translate('+ mar.l+','+mar.t+')');
+  var scls = d3.selectAll('svg');
+
+  var yscle = d3.svg.axis().scale(yscl).orient("left").ticks(5);
+  var xscle = d3.svg.axis().scale(xscl).orient("bottom").ticks(20);
+  scls.append('g').call(yscle)
+      .attr('transform','translate('+ 2*mar.l+','+mar.t+')')
+      .attr('fill','').attr('stroke-width',0.3);
+  scls.append('g').call(xscle).attr('transform','translate('+mar.l+',514)');
+
+  d3.selectAll('svg')
+    .append('text')
+    .text('Congressional Seniority (Years)')
+     .attr('transform', 'translate(450,570)');
+
+  d3.selectAll('svg')
+    .append('text')
+    .text('Votes with Party(%)')
+    .attr('transform', ['translate(50,375)', 'rotate(-90)']);
+
+
+
+</script>
